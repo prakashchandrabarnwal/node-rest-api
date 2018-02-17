@@ -4,14 +4,24 @@ const mongoose=require("mongoose");
 const Product=require("../models/product");
 
 router.get("/",(req,res,next)=>{
-Product.find().then(result=>{
-  if(result.length){
-    res.status(200).json(result)
-  }else{
-    res.status(400).json({
-      messgae:"No Entries Found"
+Product.find()
+.select("name price _id").then(result=>{
+  const response={
+    count:result.length,
+    products:result.map(doc=>{
+      return {
+        name:doc.name,
+        price:doc.price,
+        id:doc._id,
+        request:{
+          type:"GET",
+          url:"http://localhost:8080/products/"+doc._id
+        }
+      }
     })
   }
+    res.status(200).json(response)
+
 
 }).catch(err=>{
   res.status(500).json({
@@ -44,11 +54,22 @@ router.post("/",(req,res,next)=>{
 
   product.save().then(result=>{
     res.status(201).json({
-      message:"Handling POST requets to /products",
-      createdProduct:product
+      message:"created products",
+      createdProduct:{
+        name:result.name,
+        price:result.price,
+        _id:result._id,
+        request:{
+          type:"GET",
+          url:"http://localhost:8080/products/"+result._id
+        }
+      }
     })
   }).catch(err=>{
-    console.log(err);
+    res.status(501).json({
+      message:"Handling POST requets to /products",
+      Error:err
+    })
   });
 
 
@@ -57,10 +78,18 @@ router.post("/",(req,res,next)=>{
 router.get("/:productId",(req,res,next)=>{
   const id=req.params.productId;
     Product.findById(id)
+    .select("name _id price")
       .exec()
       .then(doc=>{
         if(doc){
-          res.status(200).json(doc)
+          res.status(200).json({
+            product:doc,
+            request:{
+              type:"GET",
+              description:"Get all products",
+              url:"http://localhost:8080/products/"
+            }
+          })
         }
         else {
           res.status(404).json({messgae:"No Valid record"})
